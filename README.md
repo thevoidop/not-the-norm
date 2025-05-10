@@ -1,36 +1,116 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# not-the-norm
 
-## Getting Started
+An **anonymous opinion-sharing web platform** built with Next.js, MongoDB, and Tailwind CSS.
+Users can post bold thoughts without revealing their identity, react with emoji-based feedback, and explore ideas outside the mainstream.
 
-First, run the development server:
+## [Live Demo](https://not-the-norm.onrender.com)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🚀 Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+-   🔐 JWT-based authentication with cookie sessions
+-   🗣️ Create and share long-form, opinion-based posts
+-   💬 React with emoji types: like, laugh, angry, dislike
+-   📅 Timestamps with human-readable formats
+-   📵 Protected routes for authenticated users only
+-   🔔 Toast notifications using React Hot Toast
+-   🎨 Clean, responsive design with Tailwind CSS
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🛠️ Tech Stack
 
-## Learn More
+-   Next.js 15 (App Router)
+-   React
+-   MongoDB + Mongoose
+-   Tailwind CSS
+-   jsonwebtoken (JWT)
+-   bcryptjs
+-   react-hot-toast
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📁 Folder Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+/app  
+├── page.js — Home feed  
+├── profile/page.js — User profile page  
+├── api/auth — Auth routes (login, logout, check-auth)  
+├── api/posts — Routes for creating posts and reacting
 
-## Deploy on Vercel
+/components  
+├── PostCard.jsx — Single post display  
+├── PostBox.jsx — New post input UI  
+├── Navbar.jsx — Navigation header
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+/models  
+├── User.js — Mongoose user schema  
+├── Post.js — Mongoose post schema
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+/utils  
+├── dbConnect.js — MongoDB connection  
+├── AuthContext.js — Client-side auth context  
+├── middleware.js — Protects routes via Next.js Middleware
+
+---
+
+## 📦 Getting Started
+
+1. Clone the repo:
+
+    ```git
+    git clone https://github.com/your-username/not-the-norm.git
+    cd not-the-norm
+    ```
+
+2. Install dependencies:
+
+    ```
+    npm install
+    ```
+
+3. Create .env.local:
+
+    ```
+    MONGODB_URI=your_mongodb_uri
+    TOKEN_SECRET=your_jwt_secret
+    ```
+
+4. Run the dev server:
+    ```
+    npm run dev
+    ```
+
+---
+
+## 🧾 Environment Variables
+
+-   MONGODB_URI — Your MongoDB connection string
+-   TOKEN_SECRET — Secret key for signing JWTs
+
+---
+
+## 🔐 Route Protection
+
+All routes except / are protected.
+Middleware checks for a valid JWT cookie and redirects unauthenticated users to /auth/login.
+
+---
+
+## 🖼️ Static Assets
+
+All reaction emoji images (like.svg, laugh.svg, etc.) should be placed in the /public folder.
+Access them using /like.svg paths.
+
+---
+
+## 💬 Contributing
+
+Pull requests are welcome.
+Please keep discussions thoughtful and aligned with the platform’s goal of respectful discourse around controversial ideas.
+
+---
+
+## 📄 License
+
+MIT License
+Use at your own risk. This project is experimental and intended for educational and creative exploration.
