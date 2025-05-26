@@ -81,6 +81,37 @@ export async function POST(request) {
             );
         }
 
+        const today = new Date();
+        const startOfDay = new Date(
+            today.getFullYear(),
+            today.getMonth(),
+            today.getDate()
+        );
+        const endOfDay = new Date(
+            today.getFullYear(),
+            today.getMonth(),
+            today.getDate() + 1
+        );
+
+        const todayPostCount = await Post.countDocuments({
+            user: user._id,
+            createdAt: {
+                $gte: startOfDay,
+                $lt: endOfDay,
+            },
+        });
+
+        if (todayPostCount >= 2) {
+            return NextResponse.json(
+                {
+                    error: "Daily post limit reached. You can only create 2 posts per day.",
+                    postsToday: todayPostCount,
+                    maxPosts: 2,
+                },
+                { status: 429 }
+            );
+        }
+
         const newPost = new Post({
             text,
             user: user._id,
@@ -88,8 +119,16 @@ export async function POST(request) {
 
         await newPost.save();
 
+        user.posts.push(newPost._id);
+        await user.save();
+
         return NextResponse.json(
-            { message: "Post created successfully", post: newPost },
+            {
+                message: "Post created successfully",
+                post: newPost,
+                postsToday: todayPostCount + 1,
+                remainingPosts: 2 - (todayPostCount + 1),
+            },
             { status: 201 }
         );
     } catch (error) {
