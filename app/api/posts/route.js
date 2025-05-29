@@ -3,6 +3,7 @@ import User from "@/models/User";
 import connect from "@/utils/dbConnect";
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 export async function POST(request) {
     try {
@@ -93,23 +94,73 @@ export async function POST(request) {
             today.getDate() + 1
         );
 
-        const todayPostCount = await Post.countDocuments({
-            user: user._id,
-            createdAt: {
-                $gte: startOfDay,
-                $lt: endOfDay,
-            },
-        });
+        const dailyKey = `${user._id.toString()}_${
+            startOfDay.toISOString().split("T")[0]
+        }`;
 
-        if (todayPostCount >= 2) {
+        const dailyCounter = await mongoose.connection.db
+            .collection("daily_post_counters")
+            .findOneAndUpdate(
+                {
+                    userId: user._id,
+                    date: startOfDay,
+                },
+                {
+                    $inc: { count: 1 },
+                    $setOnInsert: {
+                        userId: user._id,
+                        date: startOfDay,
+                        createdAt: new Date(),
+                    },
+                },
+                {
+                    upsert: true,
+                    returnDocument: "after",
+                }
+            );
+
+        if (dailyCounter.count > 2) {
+            await mongoose.connection.db
+                .collection("daily_post_counters")
+                .findOneAndUpdate(
+                    {
+                        userId: user._id,
+                        date: startOfDay,
+                    },
+                    { $inc: { count: -1 } }
+                );
+
             return NextResponse.json(
                 {
                     error: "Daily post limit reached. You can only create 2 posts per day.",
-                    postsToday: todayPostCount,
+                    postsToday: 2,
                     maxPosts: 2,
+                    attackPrevented: true,
                 },
                 { status: 429 }
             );
+        }
+
+        if (Math.random() < 0.01) {
+            setTimeout(async () => {
+                try {
+                    const twoDaysAgo = new Date();
+                    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+                    twoDaysAgo.setHours(0, 0, 0, 0);
+
+                    const result = await mongoose.connection.db
+                        .collection("daily_post_counters")
+                        .deleteMany({ date: { $lt: twoDaysAgo } });
+
+                    if (result.deletedCount > 0) {
+                        console.log(
+                            `Auto cleanup: Removed ${result.deletedCount} old counter records`
+                        );
+                    }
+                } catch (cleanupError) {
+                    console.error("Auto cleanup failed:", cleanupError);
+                }
+            }, 0);
         }
 
         const newPost = new Post({
@@ -117,20 +168,43 @@ export async function POST(request) {
             user: user._id,
         });
 
-        await newPost.save();
+        const session = await mongoose.startSession();
 
-        user.posts.push(newPost._id);
-        await user.save();
+        try {
+            await session.withTransaction(async () => {
+                await newPost.save({ session });
 
-        return NextResponse.json(
-            {
-                message: "Post created successfully",
-                post: newPost,
-                postsToday: todayPostCount + 1,
-                remainingPosts: 2 - (todayPostCount + 1),
-            },
-            { status: 201 }
-        );
+                await User.findByIdAndUpdate(
+                    user._id,
+                    { $push: { posts: newPost._id } },
+                    { session }
+                );
+            });
+
+            return NextResponse.json(
+                {
+                    message: "Post created successfully",
+                    post: newPost,
+                    postsToday: dailyCounter.count,
+                    remainingPosts: 2 - dailyCounter.count,
+                },
+                { status: 201 }
+            );
+        } catch (transactionError) {
+            await mongoose.connection.db
+                .collection("daily_post_counters")
+                .findOneAndUpdate(
+                    {
+                        userId: user._id,
+                        date: startOfDay,
+                    },
+                    { $inc: { count: -1 } }
+                );
+
+            throw transactionError;
+        } finally {
+            await session.endSession();
+        }
     } catch (error) {
         console.error("Error creating post:", error);
         return NextResponse.json(
